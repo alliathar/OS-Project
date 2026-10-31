@@ -1,0 +1,12 @@
+# This project is edited on Windows but RUN on Linux/WSL2. Shell scripts and
+# source must keep LF endings or bash will choke on the shebang (`\r` errors).
+* text=auto eol=lf
+
+*.sh    text eol=lf
+*.py    text eol=lf
+*.c     text eol=lf
+*.h     text eol=lf
+Makefile text eol=lf
+
+*.pdf   binary
+*.png   binary

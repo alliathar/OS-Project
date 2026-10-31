@@ -1,0 +1,17 @@
+# Generated build + run artifacts (reproducible from a clean checkout).
+build/
+config/
+third_party/
+
+# Results are generated; keep the folder but not its contents.
+results/*
+!results/.gitkeep
+
+# Editor / OS noise
+*.o
+*.swp
+.DS_Store
+
+# Keep the source PDFs out of diffs but not ignored by default:
+# (uncomment if the repo gets large)
+# *.pdf
