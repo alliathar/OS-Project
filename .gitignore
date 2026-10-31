@@ -15,3 +15,7 @@ results/*
 # Keep the source PDFs out of diffs but not ignored by default:
 # (uncomment if the repo gets large)
 # *.pdf
+
+# Python bytecode
+__pycache__/
+*.pyc
