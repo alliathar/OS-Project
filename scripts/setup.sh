@@ -98,6 +98,25 @@ else
     echo "[hardened] .so not built; hardened rows will be skipped until present."
 fi
 
+# --- Python environment for the PDF report ------------------------------------
+# Ubuntu blocks system-wide pip installs, so the PDF generator gets its own venv
+# (outside the project, so a space in the project path can't break it).
+# --system-site-packages lets it reuse an apt-installed matplotlib.
+VENV="$HOME/.heapalloc/venv"
+REPORT_PYTHON=""
+echo
+echo "[report]  preparing Python venv for the PDF report at $VENV ..."
+if [[ ! -x "$VENV/bin/python" ]]; then
+    python3 -m venv --system-site-packages "$VENV" \
+        || echo "[report]  venv creation FAILED (install python3-venv)"
+fi
+if [[ -x "$VENV/bin/python" ]]; then
+    "$VENV/bin/python" -m pip install --quiet "reportlab>=4,<5" "matplotlib>=3.5" \
+        && REPORT_PYTHON="$VENV/bin/python" \
+        || echo "[report]  pip install FAILED -- the PDF step will be unavailable"
+fi
+[[ -n "$REPORT_PYTHON" ]] && echo "[report]  ready: $REPORT_PYTHON"
+
 # --- stage .so files out of any space-containing path -------------------------
 # LD_PRELOAD is a space/colon-separated list, so it CANNOT reference a path that
 # contains a space (e.g. this "OS Project" folder). Any such .so is copied into
@@ -134,6 +153,8 @@ cat > "$CONF" <<EOF
 GLIBC_SO="$GLIBC_SO"
 SCUDO_SO="$SCUDO_SO"
 HARDENED_SO="$HARDENED_SO"
+# Python with reportlab, used by scripts/make_pdf.sh
+REPORT_PYTHON="$REPORT_PYTHON"
 EOF
 
 echo

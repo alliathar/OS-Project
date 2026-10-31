@@ -27,10 +27,18 @@ are compiled once and never changed between allocators.
 ## Requirements
 
 - **Linux, x86-64** (a VM or **WSL2** — `LD_PRELOAD` allocator swapping is Linux-only).
-- `gcc` or `clang`, `make`, `git`, `python3`.
-- For plots: `python3 -m pip install matplotlib` (optional; tables still work without it).
-- For Scudo: an LLVM compiler-rt that ships it — `sudo apt-get install clang libclang-rt-dev`.
+- `gcc` or `clang`, `make`, `git`, `python3` (+ `python3-venv` for the PDF report).
+- For plots: `matplotlib` (optional for `report.py`; tables still work without it).
+- For Scudo: an LLVM compiler-rt that ships it (`libclang-rt-18-dev` on Ubuntu 24.04).
 - For hardened_malloc: built from source automatically by `setup.sh` (needs `git` + `make`).
+- For the PDF: `setup.sh` creates a Python venv at `~/.heapalloc/venv` and installs
+  `reportlab` into it (needs network access once).
+
+On Ubuntu 24.04 / WSL2, one command installs everything:
+
+```bash
+sudo apt-get update && sudo apt-get install -y build-essential git python3 python3-venv python3-matplotlib clang libclang-rt-18-dev
+```
 
 > On Windows, open this folder inside WSL2 (`wsl` then `cd` to it) and run everything there.
 
@@ -51,11 +59,13 @@ make                        # build all attacks + benchmarks into build/
 ./scripts/run_all.sh        # attacks x allocators  -> results/attack_matrix.csv
 ./scripts/measure.sh        # speed + memory         -> results/perf.csv, results/memory.csv
 python3 scripts/report.py   # CSVs -> results/summary.md (+ PNG plots)
+./scripts/make_pdf.sh       # everything -> results/findings.pdf (report with charts)
 ```
 
 If scripts aren't executable yet: `chmod +x scripts/*.sh`.
-Each script takes an optional run-count argument, e.g. `./scripts/run_all.sh 10`.
-Open **`results/summary.md`** for the final tables and plots.
+`run_all.sh` and `measure.sh` take an optional run count, e.g. `./scripts/run_all.sh 10`.
+Open **`results/findings.pdf`** for the write-up with charts, or
+**`results/summary.md`** for the plain tables.
 
 An allocator that `setup.sh` could not find is simply **skipped** (its rows are
 left out) so the rest of the pipeline still runs — e.g. glibc-only on a box
@@ -108,10 +118,19 @@ Final/
     run_all.sh           # -> results/attack_matrix.csv (+ results/logs/)
     measure.sh           # -> results/perf.csv, results/memory.csv
     report.py            # CSVs -> results/summary.md + plots
-  config/                # generated: allocators.env (allocator .so paths)
+    make_pdf.sh          # runs findings_pdf.py with the report venv
+    findings_pdf.py      # CSVs + logs -> results/findings.pdf + results/figures/
+  config/                # generated: allocators.env (.so paths, report Python)
   third_party/           # generated: cloned/built hardened_malloc
   build/                 # generated: compiled binaries
-  results/               # generated: CSVs, logs, summary, plots — never hand-edited
+  results/               # generated, never hand-edited:
+    attack_matrix.csv    #   one row per attack run (outcome, exit code, signal)
+    logs/                #   full output of every attack run
+    environment.txt      #   machine + versions the results came from
+    perf.csv, memory.csv #   benchmark runs
+    summary.md           #   plain tables (report.py)
+    findings.pdf         #   report with charts (make_pdf.sh)
+    figures/             #   the charts embedded in findings.pdf
   report/                # the written report
 ```
 

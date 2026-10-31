@@ -54,6 +54,22 @@ else
     echo "NOTE: hardened_malloc not configured; skipping."
 fi
 
+# Record the environment these results came from (read by findings_pdf.py).
+{
+    echo "date_utc: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "os: $(. /etc/os-release 2>/dev/null; echo "${PRETTY_NAME:-unknown}")"
+    echo "kernel: $(uname -r)"
+    echo "cpu: $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ *//')"
+    echo "cpus: $(nproc)"
+    echo "glibc: $(ldd --version 2>/dev/null | head -n1)"
+    echo "compiler: $(cc --version 2>/dev/null | head -n1)"
+    echo "scudo_so: ${SCUDO_SO:-none}"
+    echo "hardened_so: ${HARDENED_SO:-none}"
+    echo "hardened_commit: $(git -C "$ROOT/third_party/hardened_malloc" log -1 --format='%h (%cs)' 2>/dev/null || echo unknown)"
+    echo "runs_per_cell: $N_RUNS"
+    echo "timeout_s: $TIMEOUT_S"
+} > "$RESULTS/environment.txt"
+
 echo "attack,allocator,run,outcome,exit_code,signal,loaded" > "$CSV"
 
 # classify <exit_status> <marker_found> -> echoes "outcome exit_code signal"
