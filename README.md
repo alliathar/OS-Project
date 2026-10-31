@@ -34,6 +34,13 @@ are compiled once and never changed between allocators.
 
 > On Windows, open this folder inside WSL2 (`wsl` then `cd` to it) and run everything there.
 
+Two things `setup.sh` handles for you, in case you wonder why:
+- **hardened_malloc needs C23.** Its Makefile uses `-std=c23`, which gcc < 14 rejects
+  (Ubuntu 24.04 ships gcc 13). `setup.sh` detects that and builds it with `clang` instead.
+- **`LD_PRELOAD` can't take paths containing spaces** (it is a space/colon-separated list).
+  If the project lives under a path with a space (e.g. `OS Project/`), `setup.sh` copies
+  the allocator `.so` files to `~/.heapalloc/lib/` and records that path instead.
+
 ---
 
 ## How to run it (from a clean checkout)

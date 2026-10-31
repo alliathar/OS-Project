@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,12 +22,23 @@
  *
  * What each allocator is expected to do:
  *   - glibc: no wiping and eager reuse -> the secret is usually recovered.
- *   - Scudo: delayed reuse (quarantine) often hands back a different region.
+ *   - Scudo: has an optional quarantine (delayed reuse), but it is OFF by
+ *     default (quarantine size 0), so the same block can come straight back.
  *   - hardened_malloc: zero-on-free wipes the secret before reuse.
  */
 
 #define N     64
 #define SECRET "TOP-SECRET-CANARY-0xDEADBEEF"
+
+/*
+ * The secret is written at an offset, not at the start of the block. Free-list
+ * allocators store their own pointers in the first bytes of a freed chunk
+ * (glibc tcache writes a next-pointer + key into bytes 0-15). A secret at
+ * offset 0 would be clobbered by that bookkeeping and look "wiped" even though
+ * nothing was wiped. Offset 32 is past that, so a miss here really means the
+ * allocator zeroed the memory or handed back a different block.
+ */
+#define SECRET_OFF 32
 
 int main(void) {
     ATTACK_BEGIN("uninitialized_read");
@@ -37,8 +49,12 @@ int main(void) {
         return 1;
     }
     memset(first, 0, N);
-    strncpy(first, SECRET, N - 1);
-    STEP("wrote secret into first block at %p", (void *)first);
+    memcpy(first + SECRET_OFF, SECRET, strlen(SECRET));
+    STEP("wrote secret at offset %d of first block at %p", SECRET_OFF, (void *)first);
+
+    /* Keep the address as an integer so we can compare after free without
+     * touching a dangling pointer. */
+    uintptr_t first_addr = (uintptr_t)first;
 
     STEP("free() the block holding the secret");
     free(first);
@@ -51,7 +67,7 @@ int main(void) {
     STEP("re-allocated %d bytes at %p; reading WITHOUT initializing", N, (void *)second);
 
     /* Deliberate read of uninitialized memory, scanning for the leftover secret. */
-    int leaked = (memcmp(second, SECRET, strlen(SECRET)) == 0);
+    int leaked = (memcmp(second + SECRET_OFF, SECRET, strlen(SECRET)) == 0);
 
     if (leaked) {
         STEP("leftover secret recovered from freed memory");
@@ -60,7 +76,9 @@ int main(void) {
         return 0;
     }
 
-    STEP("memory was wiped or not reused; no secret recovered (defense worked)");
+    STEP("%s; no secret recovered (defense worked)",
+         (uintptr_t)second == first_addr ? "same block reused but wiped"
+                                         : "different block handed back");
     free(second);
     return 1; /* no ATTACK SUCCEEDED marker -> runner records this as STOPPED */
 }
