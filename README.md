@@ -7,7 +7,7 @@ OS final project (Habib University, Fall 2026) — **Memory Management** + **Sec
 > replacements, which attacks does each one stop, which still get through, and
 > what does the extra safety cost in speed and memory?
 
-**Author:** Muhammad Ali Athar (10569). **Team:** _add members before submitting._
+**Team:** Muhammad Ali Athar (10569), Aleena Abbasi, Shaheer Qureshi.
 
 ---
 

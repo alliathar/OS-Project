@@ -10,7 +10,7 @@ Operating Systems final project (Habib University, Fall 2026). Research question
 > does each one stop, which still get through, and what does the extra safety cost?
 
 Course elements covered: **Memory Management** and **Security** (the brief asks for one or more).
-Author: Muhammad Ali Athar (ID 10569). Team: _add members before submitting_.
+Team: Muhammad Ali Athar (ID 10569), Aleena Abbasi, Shaheer Qureshi.
 Deadlines: proposal + group registration **Nov 2, 2026**; final submission **Nov 26, 2026, 11:59 PM**.
 
 ## The core comparison

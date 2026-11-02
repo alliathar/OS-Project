@@ -651,7 +651,8 @@ def build():
     d.p("Heap Allocator Security: Interim Findings", "title")
     d.p("How glibc malloc, Scudo and hardened_malloc handled six heap bugs, "
         "and what their protection costs", "subtitle")
-    d.p(f"Muhammad Ali Athar (10569) · Operating Systems final project, Habib "
+    d.p(f"Muhammad Ali Athar (10569), Aleena Abbasi, Shaheer Qureshi · "
+        f"Operating Systems final project, Habib "
         f"University, Fall 2026<br/>Interim report: baseline results only; the bypass "
         f"variants are still to come. Experiments run {run_date} on "
         f"{escape(env.get('os', 'Linux'))}; this PDF was generated {generated} from the "
@@ -1081,7 +1082,7 @@ def build():
     pdf = SimpleDocTemplate(OUT, pagesize=A4, leftMargin=2 * cm, rightMargin=2 * cm,
                             topMargin=1.8 * cm, bottomMargin=2 * cm,
                             title="Heap Allocator Security: Interim Findings",
-                            author="Muhammad Ali Athar")
+                            author="Muhammad Ali Athar, Aleena Abbasi, Shaheer Qureshi")
     pdf.build(d.story, onFirstPage=footer, onLaterPages=footer)
     print(f"wrote {OUT}")
     print(f"wrote figures to {FIGS}/")
