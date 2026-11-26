@@ -94,6 +94,11 @@ ATTACKS = {
     "use_after_free": ("Use after free",
                        "Reads and writes a block through its pointer after "
                        "freeing it."),
+    "uaf_reclaim": ("UAF reclaim (type confusion)",
+                    "Frees an object holding a function pointer and a privilege "
+                    "flag, then sprays same-size allocations until the freed "
+                    "slot is reused, hijacking both through the dangling "
+                    "pointer."),
 }
 META_A_SIZE = 32  # malloc(32) for block a in src/attacks/metadata_overwrite.c
 

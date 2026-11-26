@@ -144,6 +144,7 @@ Final/
 | `metadata_overwrite.c` | overflow into a neighbour's header | **inline vs. separated metadata** — the core design difference |
 | `invalid_free.c` | `free()` a non-heap pointer | pointer validity checks |
 | `uninitialized_read.c` | read reused memory for a leftover secret | zero-on-free / delayed reuse (info-leak defense) |
+| `uaf_reclaim.c` | UAF → reclaim the freed slot → type confusion | **our own bypass** — whether randomized/quarantined reuse actually *stops* a UAF exploit, or just slows it down |
 
 > ⚠️ These programs contain **intentional** undefined behaviour — that is the
 > experiment. Each file comments *why* the UB is there. Do not reuse them as
@@ -156,9 +157,55 @@ real bug first. They replace `malloc` too, so run them **separately** — never
 stacked with Scudo/hardened_malloc. If a detector flags a bug but an allocator
 still reaches `ATTACK SUCCEEDED`, that's a genuine miss worth reporting.
 
-## Next step: bypass variants
+## Our bypass attack: `uaf_reclaim.c` (the research contribution)
 
-Once the baseline matrix is clean, add tuned variants under `src/attacks/` that
-try to *evade* a specific defense (e.g. heap-spray + delayed reuse vs. Scudo's
-quarantine; an overflow sized to miss a guard page). Label which defense each
-targets — that comparison is the project's research contribution.
+The baseline matrix shows the plain `use_after_free` already slips past all
+three allocators — but only as a *silent stale read*, which isn't an exploit.
+`uaf_reclaim.c` is the bug **we designed** to turn a use-after-free into a real
+primitive and see whether any of the three can stop it:
+
+1. Allocate a victim object holding a privilege flag (`is_admin`) and a function
+   pointer (`action`), set up as an ordinary user.
+2. `free()` the victim, keep the dangling pointer.
+3. **Groom the heap**: allocate same-size objects filled with attacker bytes
+   (`is_admin = 1`, `action = pwned()`) until the allocator hands the victim's
+   exact slot back to one of them. Reading the dangling pointer then sees the
+   attacker's bytes — the flag is flipped and the function pointer is hijacked.
+
+It reaches `ATTACK SUCCEEDED` (privilege escalated **and** the hijacked function
+pointer called) under **glibc, Scudo, and hardened_malloc** — the only attack in
+the suite that beats all three as a genuine exploit. The reason it cannot be
+stopped by design: handing a freed slot back to a later same-size allocation is
+exactly an allocator's job.
+
+What makes it a *bypass* (and the interesting finding) is what each defense
+costs the attacker, not whether it blocks the bug:
+
+- **glibc** — tcache is LIFO, so the first replacement allocation reclaims the
+  slot. Instant, deterministic (`reclaimed on allocation #0`).
+- **Scudo** — randomized placement, but quarantine is off by default, so reclaim
+  is still immediate in practice.
+- **hardened_malloc** — the hard case, and it took two tuning rounds to beat:
+  - A lone `free()` + spray *fails*: hardened **retires the now-empty slab**, so
+    the victim's address never returns. Fix: allocate neighbour objects and keep
+    them live so the slab is **pinned** (never empty) and the freed slot stays in
+    play.
+  - An allocation-only spray *still fails*: hardened's **slot quarantine is
+    drained by frees, not allocations**, so the slot stays quarantined forever.
+    Fix: **free every churn allocation that missed**, which advances the
+    quarantine until the victim's slot is evicted back into the pool.
+  - With both fixes it succeeds every run, but only after thousands of churned
+    allocations (typically ~7,500–16,000) — a direct, measurable price for
+    hardened's randomization + quarantine.
+
+**Takeaway for the report:** randomized placement and quarantines don't *prevent*
+UAF-to-type-confusion; they raise the number of attempts an attacker needs. That
+cost is real defense-in-depth (it defeats a naive one-shot attacker), but a
+patient attacker who grooms the heap still wins.
+
+### Ideas for further variants
+
+Other tuned attacks could extend the comparison — e.g. an overflow sized to land
+inside a slab (missing hardened's guard page and slot canary), or a spray tuned
+against Scudo's quarantine when it is explicitly enabled. Label which defense
+each targets.
